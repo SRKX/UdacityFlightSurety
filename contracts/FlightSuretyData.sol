@@ -14,6 +14,8 @@ contract FlightSuretyData {
     // Blocks all state changes throughout the contract if false
     bool private operational = true;
 
+    address private authorizedCaller;
+
     struct AirlineData {
         bool isRegistered;
         bool awaitsFunding;
@@ -82,6 +84,16 @@ contract FlightSuretyData {
         _;
     }
 
+    /**
+    * @dev Modifier that requires the "AuthorizedCaller" account to be the function caller
+    * or, of course, the contract owner.
+    */
+    modifier requireAuthorizedCaller()
+    {
+        require(msg.sender == authorizedCaller || msg.sender == contractOwner, "Caller is not authorized");
+        _;
+    }
+
 
     modifier requireExactFunding()
     {
@@ -120,6 +132,15 @@ contract FlightSuretyData {
                             requireContractOwner 
     {
         operational = mode;
+    }
+
+    function authorizeCaller( address caller )
+                                        public
+                                        requireContractOwner
+    {
+        //We set the authorized caller for the data function
+        //NOTE: this could be implemented as a list for more modularity
+        authorizedCaller = caller;
     }
 
     /********************************************************************************************/
@@ -184,29 +205,21 @@ contract FlightSuretyData {
                     )
                     public
                     view
+                    requireAuthorizedCaller
                     returns(bool)
+                    
     {
         //Simply checks in the mapping if the Airline is registered
         return airlines[ airlineAddress ].isRegistered;
     }
 
-    function getNumberOfRegisteredAirlines() external view returns(uint) {
+    function getNumberOfRegisteredAirlines() external view
+                                //requireAuthorizedCaller
+                                returns(uint) {
         return nbrRegisteredAirlines;
 
     }
 
-/*
-    function _registerAirlineData
-                    (
-                        address airlineAddress,
-                        bool isRegistered,
-                        bool awaitsFunding
-                    )
-                    private
-    {
-        
-    }
-    */
 
 
    /**
@@ -258,6 +271,7 @@ contract FlightSuretyData {
                             public
                             payable
                             requireExactFunding
+                            //requireAuthorizedCaller
     {
         //We make basic checks
         require( airlines[airlineAddress].exists, "Airline not yet registered" );
