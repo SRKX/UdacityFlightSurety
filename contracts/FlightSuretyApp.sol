@@ -122,7 +122,7 @@ contract FlightSuretyApp {
     {
 
 
-        dataContract.registerAirline( newAirlineAddress );
+        dataContract.registerAirline( newAirlineAddress, msg.sender );
         return (success, 0);
     }
 
@@ -370,7 +370,8 @@ contract FlightSuretyDataInterface {
 
     function registerAirline
                             (
-                                address airlineAddress
+                                address airlineAddress,
+                                address registererAddress
                             )
                             external;
 

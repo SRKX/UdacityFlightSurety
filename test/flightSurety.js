@@ -84,8 +84,8 @@ contract('Flight Surety Tests', async (accounts) => {
     catch(e) {
         //We indeed generated an error
         errorThrown = true;
-
     }
+
     let result = await config.flightSuretyData.isAirline.call(newAirline); 
 
     // ASSERT
@@ -116,10 +116,95 @@ contract('Flight Surety Tests', async (accounts) => {
     let result = await config.flightSuretyData.isAirline.call(firstAirline); 
 
     // ASSERT
-    assert.equal( registeredBefore, false, "Airline should not yet be registered" );
+    assert.equal(registeredBefore, false, "Airline should not yet be registered" );
     assert.equal(result, true, "Airline should not be able to register another airline if it hasn't provided funding");
+    assert.isBelow( Number(faBalanceAfter), Number(faBalanceBefore), "Balance of first airline should have decreased")
 
   });
- 
+
+  it('(airline) registered airline can register new airlines without vote, but they sill require funding', async () => {
+
+      let errorThrown = false;
+      //We ask the first airline which is now registered to succest a second
+      try {
+        await config.flightSuretyApp.registerAirline(config.secondAirline, {from: config.firstAirline});
+      }
+      catch(e) {
+        //We indeed generated an error
+        errorThrown = true;
+      }
+      
+      //Now, we still need the second airline not to be considered as registered until she is funded
+      let sndAirlineRegBeforeFunded = await config.flightSuretyData.isAirline.call(config.secondAirline); 
+
+      //Now, the second airline funds its participation to the contract
+      await config.flightSuretyApp.fundAirline( {from: config.secondAirline, value: web3.utils.toWei("10", "ether")  });
+
+      //After funding, we chek if it is registered
+      let sndAirlineRegAfterFunded = await config.flightSuretyData.isAirline.call(config.secondAirline); 
+
+
+      assert.equal( errorThrown, false, "Registered airline does not throw exception");
+      assert.isFalse( sndAirlineRegBeforeFunded, "Second airline should not be registered before funding");
+      assert.isTrue( sndAirlineRegAfterFunded, "Second airline should be registered after funding" )
+
+   });
+
+   it('(airline) registered airline can register new airlines without vote, but they sill require funding', async () => {
+
+        let errorThrown = false;
+        //We ask the first airline which is now registered to succest a second
+        try {
+        await config.flightSuretyApp.registerAirline(config.secondAirline, {from: config.firstAirline});
+        }
+        catch(e) {
+        //We indeed generated an error
+        errorThrown = true;
+        }
+        
+        //Now, we still need the second airline not to be considered as registered until she is funded
+        let sndAirlineRegBeforeFunded = await config.flightSuretyData.isAirline.call(config.secondAirline); 
+
+        //Now, the second airline funds its participation to the contract
+        await config.flightSuretyApp.fundAirline( {from: config.secondAirline, value: web3.utils.toWei("10", "ether")  });
+
+        //After funding, we chek if it is registered
+        let sndAirlineRegAfterFunded = await config.flightSuretyData.isAirline.call(config.secondAirline); 
+
+
+
+        assert.equal( errorThrown, false, "Registered airline does not throw exception");
+        assert.isFalse( sndAirlineRegBeforeFunded, "Second airline should not be registered before funding");
+        assert.isTrue( sndAirlineRegAfterFunded, "Second airline should be registered after funding" )
+
+    });
+
+    it('(airline) 50% consensus is required for the 5th airline ', async () => {
+
+        //We add 3rd and 4th airlines, and they submit their fund
+        await config.flightSuretyApp.registerAirline(config.thirdAirline, {from: config.firstAirline});
+        await config.flightSuretyApp.registerAirline(config.fourthAirline, {from: config.secondAirline});
+
+        await config.flightSuretyApp.fundAirline( {from: config.thirdAirline, value: web3.utils.toWei("10", "ether")  });
+        await config.flightSuretyApp.fundAirline( {from: config.fourthAirline, value: web3.utils.toWei("10", "ether")  });
+
+        //Now, we add a fifth airline
+        await config.flightSuretyApp.registerAirline(config.fifthAirline, {from: config.fourthAirline});
+
+        let errorThrown = false;
+        try {
+            await config.flightSuretyApp.fundAirline( {from: config.fifthAirline, value: web3.utils.toWei("10", "ether")  });
+        }
+        catch(e) {
+            errorThrown = true
+            console.log( "An error was thrown: " + e);
+        }
+         
+  
+        assert.isTrue( errorThrown, "5th airline cannot directly fund because it lacks votes");
+        //assert.isFalse( sndAirlineRegBeforeFunded, "Second airline should not be registered before funding");
+        //assert.isTrue( sndAirlineRegAfterFunded, "Second airline should be registered after funding" )
+  
+     }); 
 
 });
