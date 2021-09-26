@@ -28,7 +28,7 @@ contract FlightSuretyData {
 
 
     //Keeeping track ot the number of registered Airlines
-    uint nbrRegisteredAirlines = 0;
+    uint public nbrRegisteredAirlines = 0;
 
     uint private constant MIN_REGISTERED_AIRLINES_TO_VOTE = 4;
 
@@ -169,10 +169,8 @@ contract FlightSuretyData {
             //The current number of votes is simply the lenght of the votes list
             uint airlineVotes = currentVotes[ airlineAddress ].length;
 
-            //As we are uting integers, we say the 50% consensus is /2 + 1
-            uint requiredVotes = SafeMath.div( nbrRegisteredAirlines, 2 ) + 1 ;
 
-            if (airlineVotes >= requiredVotes) {
+            if (airlineVotes >= requiredVotes()) {
                 //The airline can now be considered registered as "AWAITING FUNDING"
                 _registerAirlineData(airlineAddress, false, true);
             }
@@ -187,6 +185,11 @@ contract FlightSuretyData {
 
         }
 
+    }
+
+    function requiredVotes() public view returns(uint)
+    {
+        return SafeMath.div( nbrRegisteredAirlines, 2 );
     }
 /*
     function hasEnoughVotes
@@ -237,6 +240,7 @@ contract FlightSuretyData {
         else {
             //Otherwise, we update it
             airlines[ airlineAddress ].isRegistered = isRegistered;
+            airlines[ airlineAddress ].awaitsFunding = awaitsFunding;
         }
         
         //Increments the counter if the airline is registered
