@@ -23,14 +23,13 @@ contract FlightSuretyData {
     //Mapping of registered airlines
     mapping( address => AirlineData ) private airlines;
 
-    //Mapping for votes
-    mapping( address => address[] ) private currentVotes;
+    
 
 
     //Keeeping track ot the number of registered Airlines
-    uint public nbrRegisteredAirlines = 0;
+    uint private nbrRegisteredAirlines = 0;
 
-    uint private constant MIN_REGISTERED_AIRLINES_TO_VOTE = 4;
+
 
     uint private constant FUNDING_AMOUNT = 10 ether;
        
@@ -53,7 +52,7 @@ contract FlightSuretyData {
         contractOwner = msg.sender;
 
         //The first airline is added at deployment, without vote.
-        _registerAirlineData(firstAirlineAddress, false, true );
+        registerAirline(firstAirlineAddress, false, true );
     }
 
     /********************************************************************************************/
@@ -135,62 +134,34 @@ contract FlightSuretyData {
     function registerAirline
                             (
                                 address airlineAddress,
-                                address registererAddress
+                                bool isRegistered,
+                                bool awaitsFunding
                             )
-                            external
+                            public
     {
-        if (nbrRegisteredAirlines < MIN_REGISTERED_AIRLINES_TO_VOTE) {
-            //We are in the case where we do not have enough airlines to vote
-            //So we just need to add its data to the collection and making it awaiting funding
-            _registerAirlineData(airlineAddress, false, true);
+        //We initialize a placeholder which will containts the data
+        AirlineData memory airlineData;
+        if (!airlines[ airlineAddress ].exists) {
+            //If the data foes not exists for this airline, we create a new one
+            //with the provided values
+            airlineData = AirlineData( isRegistered, awaitsFunding, true );
+            //And we add it to the mapping
+            airlines[ airlineAddress ] = airlineData;
         }
         else {
-            //We need to vote, and this operation is considered as a vote.
-            //The votes are counted using a list of addresses
-            //First, we get the list of current votes
-            address[] storage votes = currentVotes[ airlineAddress ];
-
-            bool hasVoted = false;
-
-            //We loop through the voting mechanism to ensure this airline has not already voted
-            for (uint i=0; i<votes.length; i++) {
-                if (votes[i]==registererAddress) {
-                    hasVoted = true;
-                    break;
-                }
-            }
-
-            //We fail if the registerer is trying to vote again
-            require( !hasVoted, "Airline cannot vote twice for the same candidate" );
-
-            //Otherwise, we add the current address to list 
-            currentVotes[ airlineAddress ].push( registererAddress );
-
-            //The current number of votes is simply the lenght of the votes list
-            uint airlineVotes = currentVotes[ airlineAddress ].length;
-
-
-            if (airlineVotes >= requiredVotes()) {
-                //The airline can now be considered registered as "AWAITING FUNDING"
-                _registerAirlineData(airlineAddress, false, true);
-            }
-            else {
-                //The airline sill needs more votes so we simply leave it as it is
-                if (!airlines[ airlineAddress ].exists)
-                {
-                    //We add its data for the time being.
-                    _registerAirlineData(airlineAddress, false, false);
-                }
-            }
-
+            //Otherwise, we update it
+            airlines[ airlineAddress ].isRegistered = isRegistered;
+            airlines[ airlineAddress ].awaitsFunding = awaitsFunding;
+        }
+        
+        //Increments the counter if the airline is registered
+        if (isRegistered) {
+            nbrRegisteredAirlines = SafeMath.add(nbrRegisteredAirlines, 1);
         }
 
     }
 
-    function requiredVotes() public view returns(uint)
-    {
-        return SafeMath.div( nbrRegisteredAirlines, 2 );
-    }
+    
 /*
     function hasEnoughVotes
                         (
@@ -219,7 +190,12 @@ contract FlightSuretyData {
         return airlines[ airlineAddress ].isRegistered;
     }
 
+    function getNumberOfRegisteredAirlines() external view returns(uint) {
+        return nbrRegisteredAirlines;
 
+    }
+
+/*
     function _registerAirlineData
                     (
                         address airlineAddress,
@@ -228,26 +204,9 @@ contract FlightSuretyData {
                     )
                     private
     {
-        //We initialize a placeholder which will containts the data
-        AirlineData memory airlineData;
-        if (!airlines[ airlineAddress ].exists) {
-            //If the data foes not exists for this airline, we create a new one
-            //with the provided values
-            airlineData = AirlineData( isRegistered, awaitsFunding, true );
-            //And we add it to the mapping
-            airlines[ airlineAddress ] = airlineData;
-        }
-        else {
-            //Otherwise, we update it
-            airlines[ airlineAddress ].isRegistered = isRegistered;
-            airlines[ airlineAddress ].awaitsFunding = awaitsFunding;
-        }
         
-        //Increments the counter if the airline is registered
-        if (isRegistered) {
-            nbrRegisteredAirlines = SafeMath.add(nbrRegisteredAirlines, 1);
-        }
     }
+    */
 
 
    /**
@@ -305,8 +264,8 @@ contract FlightSuretyData {
         require( !airlines[airlineAddress].isRegistered, "Airline already registered" );
         require( airlines[airlineAddress].awaitsFunding, "Airline must be awaiting funding" );
 
-        //We update the airline to be mared as REGISTERED and not expecting funding anymore
-        _registerAirlineData( airlineAddress, true, false );
+        //We update the airline to be marked as REGISTERED and not expecting funding anymore
+        registerAirline( airlineAddress, true, false );
 
         
         

@@ -26,6 +26,10 @@ contract FlightSuretyApp {
 
     address private contractOwner;          // Account used to deploy contract
 
+    //Properties used for Arilines consensus
+    uint private constant MIN_REGISTERED_AIRLINES_TO_VOTE = 4; //When do we start needing requiring votes?
+    mapping( address => address[] ) private currentVotes; //Mapping for votes
+
     FlightSuretyDataInterface private dataContract;
 
     struct Flight {
@@ -115,16 +119,75 @@ contract FlightSuretyApp {
     */   
     function registerAirline
                             (
-                                address newAirlineAddress
+                                address airlineAddress
                             )
-                            external
-                            returns(bool success, uint256 votes)
+                            public
+                            requireRegisteredAirline
+                            returns(bool, uint)
     {
 
+        //require( dataContract.isAirline(msg.sender), "Somethign is wrong");
 
-        dataContract.registerAirline( newAirlineAddress, msg.sender );
-        return (success, 0);
+        //By default, the total number of votes is 0
+        uint airlineVotes = 0;
+        bool success = false;
+
+        if (dataContract.getNumberOfRegisteredAirlines() < MIN_REGISTERED_AIRLINES_TO_VOTE) {
+            //We are in the case where we do not have enough airlines to vote
+            //So we just need to add its data to the collection and making it awaiting funding
+            dataContract.registerAirline(airlineAddress, false, true);
+            success = true;
+        }
+        else {
+            //We need to vote, and this operation is considered as a vote.
+            //The votes are counted using a list of addresses
+            //First, we get the list of current votes
+            address[] storage votes = currentVotes[ airlineAddress ];
+
+            bool hasVoted = false;
+
+            //We loop through the voting mechanism to ensure this airline has not already voted
+            for (uint i=0; i<votes.length; i++) {
+                if (votes[i]==msg.sender) {
+                    hasVoted = true;
+                    break;
+                }
+            }
+
+            //We fail if the registerer is trying to vote again
+            require( !hasVoted, "Airline cannot vote twice for the same candidate" );
+
+            //Otherwise, we add the current address to list 
+            currentVotes[ airlineAddress ].push( msg.sender );
+
+            //The current number of votes is simply the lenght of the votes list
+            airlineVotes = currentVotes[ airlineAddress ].length;
+
+
+            if (airlineVotes >= requiredVotes()) {
+                //The airline can now be considered registered as "AWAITING FUNDING"
+                dataContract.registerAirline(airlineAddress, false, true);
+                success = true;
+            }
+            else {
+                //The airline sill needs more votes so we simply leave it as it is
+                dataContract.registerAirline(airlineAddress, false, false);
+            }
+
+        }
+
+        return (success, airlineVotes);
     }
+
+    /*
+     * Simple function returning the required number of votes
+     */
+    function requiredVotes() public view returns(uint)
+    {
+        return SafeMath.div( dataContract.getNumberOfRegisteredAirlines(), 2 );
+    }
+
+
 
     function fundAirline
                         (
@@ -371,9 +434,12 @@ contract FlightSuretyDataInterface {
     function registerAirline
                             (
                                 address airlineAddress,
-                                address registererAddress
+                                bool isRegistered,
+                                bool awaitsFunding
                             )
-                            external;
+                            public;
+
+    function getNumberOfRegisteredAirlines() external view returns(uint);
 
     function isAirline
                     (

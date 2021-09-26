@@ -77,22 +77,28 @@ contract('Flight Surety Tests', async (accounts) => {
     let newAirline = accounts[2];
     let errorThrown = false;
 
+    //let firstAirlineReg = await config.flightSuretyData.isAirline.call(config.firstAirline); 
+    //console.log( "First airline registered: "+firstAirlineReg);
+
+
     // ACT
     try {
         await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
+        //errorThrown=true;
     }
     catch(e) {
         //We indeed generated an error
+        console.log( "Error thrown:" + e)
         errorThrown = true;
     }
 
     let result = await config.flightSuretyData.isAirline.call(newAirline); 
 
-    let nbrAirlines = await config.flightSuretyData.nbrRegisteredAirlines.call();
+    let nbrAirlines = await config.flightSuretyData.getNumberOfRegisteredAirlines.call();
 
     // ASSERT
-    assert.equal(errorThrown, false, "Error thrown during registration attempt");
-    assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
+    assert.isTrue(errorThrown, "Error thrown during registration attempt");
+    assert.isFalse(result, "Airline should not be able to register another airline if it hasn't provided funding");
     assert.equal(nbrAirlines, 0, "There are no airlines currently considered as registered");
 
   });
@@ -108,7 +114,9 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // ACT
     try {
-        await config.flightSuretyApp.fundAirline( {from: config.firstAirline, value: web3.utils.toWei("10", "ether")  });
+        console.log( "Trying to fund")
+        await config.flightSuretyApp.fundAirline( {from: config.firstAirline, value: web3.utils.toWei("10", "ether"), nonce: await web3.eth.getTransactionCount(config.firstAirline)  });
+        console.log( "Funding successful")
     }
     catch(e) {
         console.log( "An error was thrown: " + e);
@@ -118,7 +126,7 @@ contract('Flight Surety Tests', async (accounts) => {
     //console.log( "FA Balance after: "+faBalanceAfter)
     let result = await config.flightSuretyData.isAirline.call(firstAirline); 
 
-    let nbrAirlines = await config.flightSuretyData.nbrRegisteredAirlines.call();
+    let nbrAirlines = await config.flightSuretyData.getNumberOfRegisteredAirlines.call();
     
 
     // ASSERT
@@ -150,7 +158,7 @@ contract('Flight Surety Tests', async (accounts) => {
       //After funding, we chek if it is registered
       let sndAirlineRegAfterFunded = await config.flightSuretyData.isAirline.call(config.secondAirline); 
 
-      let nbrAirlines = await config.flightSuretyData.nbrRegisteredAirlines.call();
+      let nbrAirlines = await config.flightSuretyData.getNumberOfRegisteredAirlines.call();
 
       assert.equal( errorThrown, false, "Registered airline does not throw exception");
       assert.isFalse( sndAirlineRegBeforeFunded, "Second airline should not be registered before funding");
@@ -174,14 +182,14 @@ contract('Flight Surety Tests', async (accounts) => {
 
         let errorThrown = false;
         try {
-            //await config.flightSuretyApp.fundAirline( {from: config.fifthAirline, value: web3.utils.toWei("10", "ether")  });
+            await config.flightSuretyApp.fundAirline( {from: config.fifthAirline, value: web3.utils.toWei("10", "ether")  });
         }
         catch(e) {
             errorThrown = true
             console.log( "An error was thrown: " + e);
         }
 
-        let nbrAirlines = await config.flightSuretyData.nbrRegisteredAirlines.call();
+        let nbrAirlines = await config.flightSuretyData.getNumberOfRegisteredAirlines.call();
         console.log( "Nbr Airlines:" +nbrAirlines)
 
         //We know that there are 4 registered airlines,
@@ -190,7 +198,7 @@ contract('Flight Surety Tests', async (accounts) => {
         //Let's first ensure the same airline cannot vote many time
         let errorThrownOnDuplicateVote = false;
         try {
-            await config.flightSuretyApp.registerAirline(config.fifthAirline, {from: config.fourthAirline});
+            await config.flightSuretyApp.registerAirline(config.fifthAirline, {from: config.fourthAirline });
         }
         catch(e) {
             errorThrownOnDuplicateVote = true;
@@ -207,14 +215,14 @@ contract('Flight Surety Tests', async (accounts) => {
         //but not yet be considered as registered
         let fftAirlineRegBeforeFunded = await config.flightSuretyData.isAirline.call(config.fifthAirline); 
         console.log( "Is registered?"+fftAirlineRegBeforeFunded);
-        await config.flightSuretyApp.fundAirline( {from: config.fifthAirline, value: web3.utils.toWei("10", "ether")  });
+        await config.flightSuretyApp.fundAirline( {from: config.fifthAirline, value: web3.utils.toWei("10", "ether"),nonce: await web3.eth.getTransactionCount(config.fifthAirline)  });
         console.log( "Fifth Airline has funded");
 
         //And should now be registered
         let fftAirlineRegAfterFunded = await config.flightSuretyData.isAirline.call(config.fifthAirline); 
 
          
-        //assert.isTrue( errorThrown, "5th airline cannot directly fund because it lacks votes");
+        assert.isTrue( errorThrown, "5th airline cannot directly fund because it lacks votes");
         assert.isTrue( errorThrownOnDuplicateVote, "Airline cannot vote twice for same candidate");
         assert.isFalse( fftAirlineRegBeforeFunded, "Second airline should not be registered before funding");
         assert.isTrue( fftAirlineRegAfterFunded, "Second airline should be registered after funding" )
