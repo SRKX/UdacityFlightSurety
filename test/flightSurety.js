@@ -108,6 +108,7 @@ contract('Flight Surety Tests', async (accounts) => {
     // ARRANGE
     let firstAirline = config.firstAirline;
     let faBalanceBefore = await web3.eth.getBalance(firstAirline);
+    let dcBalanceBefore = await web3.eth.getBalance(config.flightSuretyData.address);
     //console.log( "FA Balance Before: "+faBalanceBefore)
 
     let registeredBefore = await config.flightSuretyData.isAirline.call(firstAirline); 
@@ -123,6 +124,7 @@ contract('Flight Surety Tests', async (accounts) => {
     }
 
     let faBalanceAfter = await web3.eth.getBalance(firstAirline);
+    let dcBalanceAfter = await web3.eth.getBalance(config.flightSuretyData.address);
     //console.log( "FA Balance after: "+faBalanceAfter)
     let result = await config.flightSuretyData.isAirline.call(firstAirline); 
 
@@ -133,6 +135,7 @@ contract('Flight Surety Tests', async (accounts) => {
     assert.equal(registeredBefore, false, "Airline should not yet be registered" );
     assert.equal(result, true, "Airline should not be able to register another airline if it hasn't provided funding");
     assert.isBelow( Number(faBalanceAfter), Number(faBalanceBefore), "Balance of first airline should have decreased")
+    assert.isAbove( Number(dcBalanceAfter), Number(dcBalanceBefore), "Balance of the data contract should have increased")
     assert.equal(nbrAirlines, 1, "There should now be 1 registered airline");
 
   });
