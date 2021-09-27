@@ -25,15 +25,27 @@ contract FlightSuretyData {
     //Mapping of registered airlines
     mapping( address => AirlineData ) private airlines;
 
-    
-
-
     //Keeeping track ot the number of registered Airlines
     uint private nbrRegisteredAirlines = 0;
 
-
-
     uint private constant FUNDING_AMOUNT = 10 ether;
+
+    //Keeps track of flights statuses
+    mapping(bytes32 => uint8) private flightsStatuses;
+
+
+    //Flights insurees as a mapping of a key representing
+    //a hash of flights information pointing towards a list of addresses
+    //of each insuree for the given flight
+    mapping(bytes32 => address[]) private flightsInsurees;
+
+    //Mapping holging the amounts being insured for the different flights
+    mapping(bytes32 => uint ) private insuredAmounts;
+
+    //Balances available to different addresses as a result
+    //of insurance payment.
+    mapping(address => uint ) private balances;
+
        
 
     /********************************************************************************************/
@@ -98,6 +110,12 @@ contract FlightSuretyData {
     modifier requireExactFunding()
     {
         require(msg.value == FUNDING_AMOUNT, "Exact funding amount required" );
+        _;
+    }
+
+    modifier requirePositiveBalance( address insureeAddress )
+    {
+        require( balances[insureeAddress] > 0, "Positive balance required to make a withdrawal" );
         _;
     }
 
@@ -182,19 +200,7 @@ contract FlightSuretyData {
 
     }
 
-    
-/*
-    function hasEnoughVotes
-                        (
-                            address airlineAddress
-                        )
-                        private
-                        view
-                        returns(bool)
-    {
-        return false
-    }
-*/
+
     /*
      *This determines wheter a give address is a REGISTERED airline
      *
@@ -219,7 +225,23 @@ contract FlightSuretyData {
         return nbrRegisteredAirlines;
 
     }
+    
+    function updateFlightStatus( bytes32 flightKey, uint8 statusCode ) external {
+        //We simply update the mapping in the smart contract
+        flightsStatuses[flightKey] = statusCode;
+    }
 
+    function getFlightInsurees( bytes32 flightKey )
+                    external view returns( address[] memory )
+    {
+        return flightsInsurees[ flightKey ];
+    }
+
+    function getInsuredAmount( bytes32 insuredAmountKey )
+                external view returns( uint )
+    {
+        return insuredAmounts[insuredAmountKey];
+    }
 
 
    /**
@@ -240,10 +262,14 @@ contract FlightSuretyData {
     */
     function creditInsurees
                                 (
+                                    address insureeAddress,
+                                    uint amount
                                 )
                                 external
-                                pure
+                                requireAuthorizedCaller
     {
+        //We simply add to the balance.
+        balances[insureeAddress] = SafeMath.add(balances[insureeAddress], amount);
     }
     
 
@@ -253,10 +279,18 @@ contract FlightSuretyData {
     */
     function pay
                             (
+                                address insureeAddress
                             )
                             external
-                            pure
+                            requireAuthorizedCaller
+                            requirePositiveBalance( insureeAddress )
     {
+        //We save the amount available first
+        uint amountAvailable = balances[insureeAddress];
+        //We then set the balance of the insuree to 0 to avoid re-entry attack
+        balances[insureeAddress] = 0;
+        //Finally, we pay the insuree
+        insureeAddress.transfer(amountAvailable);
     }
 
    /**
@@ -271,7 +305,7 @@ contract FlightSuretyData {
                             public
                             payable
                             requireExactFunding
-                            //requireAuthorizedCaller
+                            requireAuthorizedCaller
     {
         //We make basic checks
         require( airlines[airlineAddress].exists, "Airline not yet registered" );
@@ -298,6 +332,8 @@ contract FlightSuretyData {
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
+
+
 
     /**
     * @dev Fallback function for funding smart contract.

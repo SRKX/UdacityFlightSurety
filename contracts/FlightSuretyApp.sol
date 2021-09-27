@@ -210,12 +210,13 @@ contract FlightSuretyApp {
                                 external
                                 pure
     {
+        
 
     }
     
    /**
     * @dev Called after oracle has updated flight status
-    *
+    * 
     */  
     function processFlightStatus
                                 (
@@ -225,8 +226,48 @@ contract FlightSuretyApp {
                                     uint8 statusCode
                                 )
                                 internal
-                                pure
     {
+        //We first tell the data contract to update the status of the flight
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        dataContract.updateFlightStatus(flightKey, statusCode);
+
+        //We check if the flight was delayed because of the airline
+        if (statusCode == STATUS_CODE_LATE_AIRLINE) {
+            //In this case, we retrieve all clients who had bought an insurance for the given flight
+            address[] memory insurees = dataContract.getFlightInsurees(flightKey);
+            //Credit their account in the data contract
+            for (uint i=0; i<insurees.length; i++) {
+                //We build the key
+                bytes32 amountKey = getAmountKey( flightKey, insurees[i] );
+                //We get the amount
+                uint insuredAmount = dataContract.getInsuredAmount( amountKey );
+                //Amount to credit is computed by multiplying by 3 and dividing by 2
+                //which is the integer equivalent of multiplying by 1.5
+                uint amountToCredit = SafeMath.div( SafeMath.mul(insuredAmount, 3), 2);
+                //We credit the account of the insuree
+                dataContract.creditInsurees(insurees[i], amountToCredit);
+            }
+        }
+
+
+
+    }
+
+
+    /*
+     * Generates hash key for insured amount by combining the flight hash key
+     * and the insuree address
+     */
+    function getAmountKey
+                        (
+                            bytes32 flightKey,
+                            address insuree
+                        )
+                        pure
+                        internal
+                        returns(bytes32) 
+    {
+        return keccak256(abi.encodePacked(flightKey, insuree));
     }
 
 
@@ -360,6 +401,8 @@ contract FlightSuretyApp {
 
             // Handle flight status as appropriate
             processFlightStatus(airline, flight, timestamp, statusCode);
+
+            //Remark: should we not close the Response here?
         }
     }
 
@@ -428,7 +471,8 @@ contract FlightSuretyApp {
 //Contract interface for Data contract
 contract FlightSuretyDataInterface {
     function isOperational() 
-                            external
+                            public
+                            view
                             returns(bool);
 
     function registerAirline
@@ -455,4 +499,23 @@ contract FlightSuretyDataInterface {
                 )
                 public
                 payable;
+
+    function updateFlightStatus
+                (
+                    bytes32 flightKey,
+                    uint8 statusCode
+                ) external;
+
+    function getFlightInsurees( bytes32 flightKey )
+                    external view returns( address[] );
+
+    function getInsuredAmount( bytes32 insuredAmountKey )
+                external view returns( uint );
+
+    function creditInsurees
+                    (
+                        address insureeAddress,
+                        uint amount
+                    )
+                    external;
 }
