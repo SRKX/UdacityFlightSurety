@@ -230,6 +230,120 @@ contract('Flight Surety Tests', async (accounts) => {
         assert.isFalse( fftAirlineRegBeforeFunded, "Second airline should not be registered before funding");
         assert.isTrue( fftAirlineRegAfterFunded, "Second airline should be registered after funding" )
   
-     }); 
+     });
+
+     it( "flight can be insured for a maximum of 1 ether", async ()  => {
+        let flight = 'ND1309'; // Course number
+        let flight2 = 'LX1234';
+        let timestamp = Math.floor(Date.now() / 1000);
+
+
+        let exceptionThrown = false;
+        try {
+            //This should fail  because there is too much insured
+            await config.flightSuretyApp.insureFlight( config.firstAirline,
+                                    flight,
+                                    timestamp,
+                                    {
+                                        from:config.passengerAccount,
+                                        value: web3.utils.toWei( "1.5", "ether")
+                                    } );
+        }
+        catch(e) {
+            exceptionThrown = true;
+            console.log( "An error was thrown: " + e);
+        }
+
+
+
+        let exceptionThrown2 = false;
+        
+        let paBalanceBefore = await web3.eth.getBalance(config.passengerAccount);
+
+        try {
+            await config.flightSuretyApp.insureFlight( config.firstAirline,
+                                    flight,
+                                    timestamp,
+                                    {
+                                        from:config.passengerAccount,
+                                        value: web3.utils.toWei( "0.5", "ether"),
+                                        nonce: await web3.eth.getTransactionCount(config.passengerAccount)
+                                    } );
+        }
+        catch(e) {
+            exceptionThrown2 = true;
+        }
+        
+        let insuredAmount = await config.flightSuretyApp.getInsuredAmount.call(
+            config.firstAirline,
+            flight,
+            timestamp,
+            {
+                from:config.passengerAccount,
+                nonce: await web3.eth.getTransactionCount(config.passengerAccount)
+            });
+
+
+        let paBalanceAfter = await web3.eth.getBalance(config.passengerAccount);
+
+        let exceptionThrown3 = false;
+
+        try {
+            await config.flightSuretyApp.insureFlight( config.firstAirline,
+                                    flight,
+                                    timestamp,
+                                    {
+                                        from:config.passengerAccount,
+                                        value: web3.utils.toWei( "0.75", "ether"),
+                                        nonce: await web3.eth.getTransactionCount(config.passengerAccount)
+                                    } );
+        }
+        catch(e) {
+            exceptionThrown3 = true;
+            console.log( "An error was thrown: " + e);
+        }
+
+
+        let exceptionThrown4 = false;
+        try {
+            await config.flightSuretyApp.insureFlight( config.firstAirline,
+                                    flight,
+                                    timestamp,
+                                    {
+                                        from:config.passengerAccount,
+                                        value: web3.utils.toWei( "0.5", "ether"),
+                                        nonce: await web3.eth.getTransactionCount(config.passengerAccount)
+                                    } );
+        }
+        catch(e) {
+            exceptionThrown4 = true;
+        }
+
+        let insuredAmount2 = await config.flightSuretyApp.getInsuredAmount.call(
+                        config.firstAirline,
+                        flight,
+                        timestamp,
+                        {
+                            from:config.passengerAccount,
+                            nonce: await web3.eth.getTransactionCount(config.passengerAccount)
+                        }
+
+                    );
+
+        console.log( "Insured amount: %d", insuredAmount2 );
+
+        assert.isTrue( exceptionThrown, "No exception was thrown for an invalid amount")
+        assert.isFalse( exceptionThrown2, "An exception was thrown during a valid registration attempt")
+        assert.isTrue( exceptionThrown3, "No exception thrown after oversize top-up")
+        assert.isFalse( exceptionThrown4, "An exception was thrown during a valid top-up")
+        assert.isBelow( Number(paBalanceAfter), Number(paBalanceBefore), "Amount not deducted from passenger")
+        assert.equal( insuredAmount, web3.utils.toWei("0.5", "ether"), "Incorrect insured amount after initial insurance");
+        assert.equal( insuredAmount2, web3.utils.toWei("1.0", "ether"), "Incorrect insured amount after top-up");
+
+        
+
+     });
+
+     
 
 });
