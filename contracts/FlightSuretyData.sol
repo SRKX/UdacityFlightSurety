@@ -249,11 +249,33 @@ contract FlightSuretyData {
     *
     */   
     function buy
-                            (                             
+                            (
+                                address insureeAddress,
+                                bytes32 amountKey,
+                                bytes32 flightKey         
                             )
                             external
                             payable
+                            requireAuthorizedCaller
     {
+        bool alreadyInsured=false;
+        for (uint i=0;i<flightsInsurees[ flightKey ].length; i++) {
+            if (flightsInsurees[ flightKey ][i] == insureeAddress)
+            {
+                //The client has already insured this flight, we don't
+                //need to add him to the list
+                alreadyInsured = true;
+                break;
+            }
+        }
+
+        if (!alreadyInsured) {
+            //We need to add the new insuree to the list.
+            flightsInsurees[ flightKey ].push(insureeAddress);
+        }
+
+        //Note that the loghic for max amount is handled in tha App contract
+        insuredAmounts[ amountKey ] += msg.value;
 
     }
 

@@ -32,6 +32,8 @@ contract FlightSuretyApp {
 
     FlightSuretyDataInterface private dataContract;
 
+    uint private constant MAXIMUM_INSURED_AMOUNT = 1 ether;
+
     struct Flight {
         bool isRegistered;
         uint8 statusCode;
@@ -73,6 +75,12 @@ contract FlightSuretyApp {
     modifier requireRegisteredAirline()
     {
         require( dataContract.isAirline( msg.sender ), "Caller of the contract is not a registered airline!" );
+        _;
+    }
+
+    modifier requireValidAmount()
+    {
+        require( msg.value <= MAXIMUM_INSURED_AMOUNT, "Amount to be insureed to big.");
         _;
     }
 
@@ -211,6 +219,50 @@ contract FlightSuretyApp {
                                 pure
     {
         
+
+    }
+
+    function insureFlight
+                        (
+                            address airline,
+                            string memory flight,
+                            uint256 timestamp
+                        )
+                        public
+                        payable
+                        requireValidAmount
+    {
+        //We compute the flight key
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        //We build the key to get a possible already registered amount
+        bytes32 amountKey = getAmountKey( flightKey, msg.sender );
+        //We get the amount (will return 0 if non-existent)
+        uint insuredAmount = dataContract.getInsuredAmount( amountKey );
+        //We check the value does not exceed
+        require(insuredAmount + msg.value <= MAXIMUM_INSURED_AMOUNT, "Insured amount is too big");
+        //We send the amount to the data contract
+        dataContract.buy.value(msg.value)(msg.sender, amountKey, flightKey);
+        
+
+
+    }
+    
+
+    /*
+     * Allows a speicific user to show how much he has insured a flight for.
+     */
+    function getInsuredAmount(address airline,
+                            string memory flight,
+                            uint256 timestamp)
+                            public view
+                            returns(uint)
+    {
+        //We compute the flight key
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        //We build the key to get a possible already registered amount
+        bytes32 amountKey = getAmountKey( flightKey, msg.sender );
+
+        return dataContract.getInsuredAmount( amountKey );
 
     }
     
@@ -518,4 +570,13 @@ contract FlightSuretyDataInterface {
                         uint amount
                     )
                     external;
+
+    function buy
+                (
+                    address insureeAddress,
+                    bytes32 amountKey,
+                    bytes32 flightKey     
+                )
+                external
+                payable;
 }
