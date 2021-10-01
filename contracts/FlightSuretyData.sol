@@ -258,6 +258,8 @@ contract FlightSuretyData {
                             payable
                             requireAuthorizedCaller
     {
+        
+        
         bool alreadyInsured=false;
         for (uint i=0;i<flightsInsurees[ flightKey ].length; i++) {
             if (flightsInsurees[ flightKey ][i] == insureeAddress)
@@ -268,15 +270,15 @@ contract FlightSuretyData {
                 break;
             }
         }
-
+        
         if (!alreadyInsured) {
             //We need to add the new insuree to the list.
             flightsInsurees[ flightKey ].push(insureeAddress);
         }
-
-        //Note that the loghic for max amount is handled in tha App contract
+        
+        //Note that the logic for max amount is handled in tha App contract
         insuredAmounts[ amountKey ] += msg.value;
-
+        
     }
 
     /**
