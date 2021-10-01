@@ -330,7 +330,7 @@ contract FlightSuretyApp {
                             string flight,
                             uint256 timestamp                            
                         )
-                        external
+                        public
     {
         uint8 index = getRandomIndex(msg.sender);
 
@@ -434,7 +434,7 @@ contract FlightSuretyApp {
                             uint256 timestamp,
                             uint8 statusCode
                         )
-                        external
+                        public
     {
         require((oracles[msg.sender].indexes[0] == index) || (oracles[msg.sender].indexes[1] == index) || (oracles[msg.sender].indexes[2] == index), "Index does not match oracle request");
 
