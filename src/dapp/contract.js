@@ -1,4 +1,5 @@
 import FlightSuretyApp from '../../build/contracts/FlightSuretyApp.json';
+import FlightSuretyData from '../../build/contracts/FlightSuretyData.json';
 import Config from './config.json';
 import Web3 from 'web3';
 
@@ -6,12 +7,17 @@ export default class Contract {
     constructor(network, callback) {
 
         let config = Config[network];
+        let firstAirline = '0x37C414eDb9dAc0525170e6965F6196D43Fbae2e4';
         this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
-        this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
+        this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress );
+        this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress );
+        this.appAddress = config.appAddress;
         this.initialize(callback);
         this.owner = null;
         this.airlines = [];
         this.passengers = [];
+        //We hard code 3 flights for simplicity
+        this.flights = ["LX1234","CX4567","US8901"];
     }
 
     initialize(callback) {
@@ -29,6 +35,8 @@ export default class Contract {
                 this.passengers.push(accts[counter++]);
             }
 
+            this.flightSuretyData.methods.authorizeCaller( this.appAddress ).send( { from: this.owner });
+
             callback();
         });
     }
@@ -45,12 +53,30 @@ export default class Contract {
         let payload = {
             airline: self.airlines[0],
             flight: flight,
-            timestamp: Math.floor(Date.now() / 1000)
+            timestamp: 20210101
         } 
         self.flightSuretyApp.methods
             .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
             .send({ from: self.owner}, (error, result) => {
                 callback(error, payload);
             });
+    }
+
+    buyInsurance(flight, amount, callback) {
+        let self = this;
+        let payload = {
+            airline: self.airlines[0],
+            flight: flight,
+            timestamp: 20210101
+        } 
+
+                
+        self.flightSuretyApp.methods
+            .insureFlight(payload.airline, payload.flight, payload.timestamp)
+            .send({ from: self.owner, value: self.web3.utils.toWei( amount, "ether"), gas:9999999}, (error, result) => {
+                callback(error, payload);
+            });       
+
+        
     }
 }

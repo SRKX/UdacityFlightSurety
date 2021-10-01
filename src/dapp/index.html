@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>FlightSurety</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
@@ -20,11 +19,18 @@
     </nav>
 
     <main class="container">
+        <div class="row top-20">
+            <label class="form">Your current address</label> <span id='current-address'></span> <label class="form">Your current Balance</label> <span id='current-balance'></span>
+            <btn id='status-refresh'>Refresh</btn>
+        </div>
 
         <div id="display-wrapper" class="top-20">
         </div>
         <div class="row top-20">
-            <label class="form">Flight</label> <input type="text" id="flight-number"> <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
+            <label class="form">Flight</label> <input type="text" id="flight-number"> <label class="form">Amount (in ether)</label> <input type="text" id="insure-amount"> 
+        </div>
+        <div class="row top-20">
+             <btn class="btn btn-primary" id="buy-insurance">Buy insurance</btn> &nbsp; <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
         </div>
     </main>
 
