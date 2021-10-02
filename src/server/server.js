@@ -55,16 +55,25 @@ flightSuretyApp.events.OracleRequest({
       web3.eth.getAccounts().then( accounts => {
         for ( let a=0;a<NBR_ORACLES;a++) {
           flightSuretyApp.methods.getMyIndexes().call({ from: accounts[a]}).then( oracleIndexes => {
-            //console.log( "Inidices for %s: %s", accounts[a], oracleIndexes)
+            //Responses for Oracles are randomized
+            let random_number = Math.random();
+            //We give 80% change of returning a paying status
+            let return_code = STATUS_CODE_LATE_AIRLINE;
+            if (random_number<=0.2) {
+              return_code = STATUS_CODE_ON_TIME
+            }
             //We know there are 3 inidices by orcale
             for(let idx=0;idx<3;idx++) {
 
               try {
-                // Submit a response...it will only be accepted if there is an Index match
-                  
+                // Submit a response...it will only be accepted if there is an Index match  
+
+
                   let researchedIndex = parseInt( event.returnValues.index );
                   if (researchedIndex == oracleIndexes[idx])
                   {
+                    
+                    
 
                     console.log( "Account %s will attempt to reply", accounts[a] )
                     
@@ -73,7 +82,7 @@ flightSuretyApp.events.OracleRequest({
                       event.returnValues.airline,
                       event.returnValues.flight,
                       parseInt( event.returnValues.timestamp ),
-                      STATUS_CODE_LATE_AIRLINE)
+                      return_code)
                       .send( { from: accounts[a], gas:9999999}
                       ).then( () => {
                         console.log( "Success" );
