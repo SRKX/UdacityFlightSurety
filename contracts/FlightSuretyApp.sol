@@ -299,6 +299,9 @@ contract FlightSuretyApp {
     {
         //We first tell the data contract to update the status of the flight
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+
+        require( dataContract.getFlightStatus(flightKey) == STATUS_CODE_UNKNOWN, "Flight status has already been set!" );
+
         dataContract.updateFlightStatus(flightKey, statusCode);
 
         //We check if the flight was delayed because of the airline
@@ -458,7 +461,7 @@ contract FlightSuretyApp {
 
 
         bytes32 key = keccak256(abi.encodePacked(index, airline, flight, timestamp)); 
-        require(oracleResponses[key].isOpen, "Flight or timestamp do not match oracle request");
+        require(oracleResponses[key].isOpen, "Flight or timestamp do not match oracle request, or responses is closed");
 
         oracleResponses[key].responses[statusCode].push(msg.sender);
 
@@ -472,7 +475,8 @@ contract FlightSuretyApp {
             // Handle flight status as appropriate
             processFlightStatus(airline, flight, timestamp, statusCode);
 
-            //Remark: should we not close the Response here?
+            //We need to close the request now
+            oracleResponses[key].isOpen = false;
         }
     }
 
@@ -569,6 +573,12 @@ contract FlightSuretyDataInterface {
                 )
                 public
                 payable;
+
+    function getFlightStatus( bytes32 flightKey )
+                external
+                view
+                returns(uint8);
+
 
     function updateFlightStatus
                 (

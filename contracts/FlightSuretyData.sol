@@ -226,7 +226,19 @@ contract FlightSuretyData {
 
     }
     
-    function updateFlightStatus( bytes32 flightKey, uint8 statusCode ) external {
+    function getFlightStatus( bytes32 flightKey )
+                external
+                view
+                requireAuthorizedCaller
+                returns(uint8)
+    {
+        return flightsStatuses[flightKey];
+    }
+
+    function updateFlightStatus( bytes32 flightKey, uint8 statusCode )
+                external
+                requireAuthorizedCaller
+    {
         //We simply update the mapping in the smart contract
         flightsStatuses[flightKey] = statusCode;
     }
