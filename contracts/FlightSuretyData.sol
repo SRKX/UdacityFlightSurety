@@ -295,6 +295,15 @@ contract FlightSuretyData {
         //We simply add to the balance.
         balances[insureeAddress] = SafeMath.add(balances[insureeAddress], amount);
     }
+
+    function getBalance( address insureeAddress ) 
+                external
+                view
+                requireAuthorizedCaller
+                returns(uint)
+    {
+        return balances[insureeAddress];
+    }
     
 
     /**
@@ -311,6 +320,9 @@ contract FlightSuretyData {
     {
         //We save the amount available first
         uint amountAvailable = balances[insureeAddress];
+
+        require( address(this).balance >= amountAvailable, "Not enough ether on the data contract to pay.");
+
         //We then set the balance of the insuree to 0 to avoid re-entry attack
         balances[insureeAddress] = 0;
         //Finally, we pay the insuree

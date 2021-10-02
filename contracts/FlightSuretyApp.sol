@@ -265,6 +265,24 @@ contract FlightSuretyApp {
         return dataContract.getInsuredAmount( amountKey );
 
     }
+
+
+    /*
+     * Allows sender to see how much ether he has available
+     */
+    function getBalance()
+                public view
+                returns(uint)
+    {
+        return dataContract.getBalance(msg.sender);
+    }
+
+    function withdraw()
+            public
+    {
+        //Simply asks the data contract to pay whatever is available.
+        dataContract.pay(msg.sender);
+    }
     
    /**
     * @dev Called after oracle has updated flight status
@@ -393,7 +411,7 @@ contract FlightSuretyApp {
     function registerOracle
                             (
                             )
-                            external
+                            public
                             payable
     {
         // Require registration fee
@@ -571,6 +589,12 @@ contract FlightSuretyDataInterface {
                     )
                     external;
 
+    function getBalance( address insureeAddress ) 
+                external
+                view
+                returns(uint);
+
+
     function buy
                 (
                     address insureeAddress,
@@ -579,4 +603,10 @@ contract FlightSuretyDataInterface {
                 )
                 external
                 payable;
+    
+    function pay
+            (
+                address insureeAddress
+            )
+            external;
 }
