@@ -59,9 +59,20 @@ flightSuretyApp.events.OracleRequest({
             let random_number = Math.random();
             //We give 80% change of returning a paying status
             let return_code = STATUS_CODE_LATE_AIRLINE;
-            if (random_number<=0.2) {
-              return_code = STATUS_CODE_ON_TIME
+            if (random_number<=0.05) {
+              return_code = STATUS_CODE_ON_TIME;
             }
+            else if (random_number <= 0.1) {
+              return_code = STATUS_CODE_LATE_OTHER;
+            }
+            else if (random_number <= 0.15) {
+              return_code = STATUS_CODE_LATE_TECHNICAL;
+            }
+            else if (random_number <= 0.20) {
+              return_code = STATUS_CODE_LATE_WEATHER;
+            }
+
+
             //We know there are 3 inidices by orcale
             for(let idx=0;idx<3;idx++) {
 
@@ -75,7 +86,7 @@ flightSuretyApp.events.OracleRequest({
                     
                     
 
-                    console.log( "Account %s will attempt to reply", accounts[a] )
+                    console.log( "Account %s will attempt to reply code: %d", accounts[a], return_code )
                     
                     flightSuretyApp.methods.submitOracleResponse(
                       oracleIndexes[idx],
