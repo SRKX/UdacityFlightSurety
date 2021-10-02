@@ -8,8 +8,7 @@ import { web } from 'webpack';
 
 let config = Config['localhost'];
 let web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http', 'ws')));
-//web3.eth.defaultAccount = web3.eth.accounts[0];
-//let firstAirline = '0x37C414eDb9dAc0525170e6965F6196D43Fbae2e4';
+
 let flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, config.appAddress );
 //let flightSuretyData = new web3.eth.Contract(FlightSuretyData.abi, config.dataAddress );
 
@@ -62,8 +61,6 @@ flightSuretyApp.events.OracleRequest({
 
               try {
                 // Submit a response...it will only be accepted if there is an Index match
-                //We handle the possible issue with the nonce
-                //web3.eth.getTransactionCount(accounts[a]).then( currentNonce => {
                   
                   let researchedIndex = parseInt( event.returnValues.index );
                   if (researchedIndex == oracleIndexes[idx])
@@ -80,18 +77,19 @@ flightSuretyApp.events.OracleRequest({
                       .send( { from: accounts[a], gas:9999999}
                       ).then( () => {
                         console.log( "Success" );
-                        //console.log('\nSuccess', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
+                        //console.log('\nSuccess', idx, oracleIndexes[idx], event.returnValues.flight, parseInt( event.returnValues.timestamp ));
                       }).catch( error => {
-                        console.log( "An error occured when submitting oracle response" )
-                        console.log( error )
+                        console.log( "Error")
+                        //console.log( "An error occured when submitting oracle response", idx,  oracleIndexes[idx].toNumber(), flight, timestamp )
+                        //console.log( error )
                       })
                   } 
-                //});
+              
 
               }
               catch(e) {
                 // Enable this when debugging
-                console.log( "Error details: "+e);
+                //console.log( "Error details: "+e);
               }
             }
           })
