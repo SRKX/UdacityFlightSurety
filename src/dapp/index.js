@@ -10,24 +10,31 @@ import './flightsurety.css';
 
     let contract = new Contract('localhost', () => {
 
+        
+
         // Read transaction
         contract.isOperational((error, result) => {
             console.log(error,result);
             display('Operational Status', 'Check if contract is operational', [ { label: 'Operational Status', error: error, value: result} ]);
         });
 
-        //contract.flightSuretyData.methods.authorizeCaller( contract.flightSuretyApp.address ).send( { from: contract.owner });
 
-        for (let i=0; i<contract.airlines; i++) {
-
-        }
+        // User-submitted transaction
+        DOM.elid('fund-airline').addEventListener('click', () => {
+            
+            // Write transaction
+            contract.fundFirstAirline((error, result) => {
+                display('Airline funding', 'fund first airline', [ { label: 'Funded', error: error, value: result} ]);
+            });
+        })
     
 
         // User-submitted transaction
         DOM.elid('submit-oracle').addEventListener('click', () => {
             let flight = DOM.elid('flight-number').value;
+            let timestamp = parseInt( DOM.elid('flight-time').value );
             // Write transaction
-            contract.fetchFlightStatus(flight, (error, result) => {
+            contract.fetchFlightStatus(flight, timestamp, (error, result) => {
                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
             });
         })
@@ -35,9 +42,24 @@ import './flightsurety.css';
         DOM.elid('buy-insurance').addEventListener('click', () => {
             let flight = DOM.elid('flight-number').value;
             let amount = DOM.elid('insure-amount').value;
+            let timestamp = parseInt( DOM.elid('flight-time').value );
             // Write transaction
-            contract.buyInsurance(flight, amount, (error, result) => {
+            contract.buyInsurance(flight, amount,timestamp,(error, result) => {
                 display('Insurance', 'Bought insurance', [ { label: 'Result', error: error, value: result.flight + ' ' + result.timestamp} ]);
+            });
+        });
+
+        DOM.elid('get-current-balance').addEventListener('click', () => {
+            // Write transaction
+            contract.getBalance((error, result) => {
+                display('Balance', 'Current balance', [ { label: 'Result', error: error, value: result} ]);
+            });
+        })
+
+        DOM.elid('withdraw-balance').addEventListener('click', () => {
+            // Write transaction
+            contract.withdraw((error, result) => {
+                display('Balance', 'Withdraw', [ { label: 'Result', error: error, value: result} ]);
             });
         })
     

@@ -7,7 +7,7 @@ export default class Contract {
     constructor(network, callback) {
 
         let config = Config[network];
-        let firstAirline = '0x37C414eDb9dAc0525170e6965F6196D43Fbae2e4';
+        this.firstAirline = '0xf17f52151EbEF6C7334FAD080c5704D77216b732';
         this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress );
         this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress );
@@ -16,8 +16,6 @@ export default class Contract {
         this.owner = null;
         this.airlines = [];
         this.passengers = [];
-        //We hard code 3 flights for simplicity
-        this.flights = ["LX1234","CX4567","US8901"];
     }
 
     initialize(callback) {
@@ -41,6 +39,12 @@ export default class Contract {
         });
     }
 
+    fundFirstAirline(callback) {
+        let self = this;
+        self.flightSuretyApp.methods.fundAirline()
+            .send( {from: self.firstAirline, value: self.web3.utils.toWei( "10.0", "ether"), gas:9999999 }, callback );
+    }
+
     isOperational(callback) {
        let self = this;
        self.flightSuretyApp.methods
@@ -48,12 +52,26 @@ export default class Contract {
             .call({ from: self.owner}, callback);
     }
 
-    fetchFlightStatus(flight, callback) {
+    getBalance(callback) {
+        let self = this;
+        self.flightSuretyApp.methods
+            .getBalance()
+            .call( {from:self.owner}, callback)
+    }
+
+    withdraw(callback) {
+        let self = this;
+        self.flightSuretyApp.methods
+            .withdraw()
+            .send( {from:self.owner, gas:9999999}, callback)
+    }
+
+    fetchFlightStatus(flight,timestamp, callback) {
         let self = this;
         let payload = {
             airline: self.airlines[0],
             flight: flight,
-            timestamp: 20210101
+            timestamp: timestamp
         } 
         self.flightSuretyApp.methods
             .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
@@ -62,12 +80,12 @@ export default class Contract {
             });
     }
 
-    buyInsurance(flight, amount, callback) {
+    buyInsurance(flight, amount, timestamp, callback) {
         let self = this;
         let payload = {
             airline: self.airlines[0],
             flight: flight,
-            timestamp: 20210101
+            timestamp: timestamp
         } 
 
                 
